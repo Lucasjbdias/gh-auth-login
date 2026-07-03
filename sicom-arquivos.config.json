@@ -1,0 +1,18 @@
+{
+  "_comentario": "Pauta de busca no SICOM (Histórico das Transmissões). Fonte: pacotes/ZIPs transmitidos em layout SICOM (fixo, conforme manuais por módulo).",
+  "exercicio": 2026,
+  "filtros": { "validaEAtual": true },
+  "orgaos": ["Prefeitura Municipal", "Câmara Municipal"],
+  "modulos": [
+    { "ordem": 1, "sigla": "AM",   "nome": "Acompanhamento Mensal" },
+    { "ordem": 2, "sigla": "IP",   "nome": "Inclusão de Programas" },
+    { "ordem": 3, "sigla": "BAL",  "nome": "Balancete" },
+    { "ordem": 4, "sigla": "FLPG", "nome": "Folha de Pagamento" },
+    { "ordem": 5, "sigla": "LCF",  "nome": "Legislação de Caráter Financeiro" },
+    { "ordem": 6, "sigla": "EL",   "nome": "Edital e Licitação" },
+    { "ordem": 7, "sigla": "OBRA", "nome": "Execução de Obra e Serviço de Engenharia" },
+    { "ordem": 8, "sigla": "CB",   "nome": "Cadastro Básico" }
+  ],
+  "objetivo": "PoC: montar análise consolidada do órgão a partir das remessas SICOM 2026; se efetiva, reprogramar o sistema.",
+  "standBy": "Arquivos de relatório enviados anteriormente (EXEC_ORC, QRP, produtos, DemoDespesa) ficam em stand-by."
+}

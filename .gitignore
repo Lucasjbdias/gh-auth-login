@@ -1,0 +1,31 @@
+/node_modules
+/.next
+/out
+/build
+*.log
+.env
+.env.local
+.DS_Store
+*.tsbuildinfo
+next-env.d.ts
+
+# Banco SQLite de desenvolvimento
+/prisma/*.db
+/prisma/*.db-journal
+/prisma/dev.db*
+
+# Arquivos de processo/servidor (gerados em runtime)
+.cf.err
+.cf.pid
+.dev.err
+.dev.pid
+.prod.err
+.prod.pid
+.server.err
+.server.pid
+.tunnel.err
+.tunnel.pid
+
+# Uploads e dados importados locais
+/uploads/
+/data/

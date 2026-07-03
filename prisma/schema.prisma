@@ -1,0 +1,1004 @@
+// GesIA Municipal 360 — Schema v2 Multi-Tenant
+// Hierarquia: Estado → Tenant (Município) → Orgao → Exercicio → dados financeiros
+//
+// Níveis de usuário: DEV | TENANT_ADMIN | GESTOR_PREFEITO | GESTOR_FAZENDA | GESTOR_SECRETARIO | VIEWER | DEMO
+// Planos de tenant: DEMO | ESSENCIAL | PROFISSIONAL | ENTERPRISE
+// Status protocolo: ABERTO | EM_TRAMITE | AGUARDANDO | CONCLUIDO | ARQUIVADO
+// Prioridade:       BAIXA | NORMAL | ALTA | URGENTE
+// Status índice:    OK | ALERTA | CRITICO | PENDENTE
+// Faixa IEGM:       A+ | A | B | C | D | E
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// =====================================================================
+// CAMADA 0 — TENANCY, AUTENTICAÇÃO & ACESSO
+// =====================================================================
+
+model Estado {
+  id     String   @id @default(cuid())
+  nome   String
+  uf     String   @unique
+  regiao String?
+  ativo  Boolean  @default(true)
+
+  tenants Tenant[]
+}
+
+model Tenant {
+  id         String   @id @default(cuid())
+  estadoId   String
+  estado     Estado   @relation(fields: [estadoId], references: [id])
+  nome       String   // "Prefeitura Municipal de Matozinhos"
+  municipio  String   // "Matozinhos"
+  slug       String   @unique // "matozinhos-mg"
+  cnpj       String?
+  codigoIBGE String?  // código IBGE 7 dígitos
+  populacao  Int?
+  plano      String   @default("ESSENCIAL")
+  ativo      Boolean  @default(true)
+  criadoEm   DateTime @default(now())
+
+  orgaos         Orgao[]
+  usuarios       Usuario[]
+  integracoes    IntegracaoConfig[]
+  leis           LeiMunicipal[]
+  leiOrganica    LeiOrganica?
+  protocolos     Protocolo[]
+  indices        IndiceConstitucional[]
+  emendas        EmendaParlamentar[]
+  transferencias TransferenciaConstitucional[]
+  iegm           IEGMHistorico[]
+  folha          FolhaPagamento[]
+  importacoes    Importacao[]
+  fontes         FonteDado[]
+  fornecedores   Fornecedor[]
+  produtos       Produto[]
+  alertas        Alerta[]
+  relatorios     RelatorioEmitido[]
+  atasRegistro   AtaRegistroPreco[]
+  obras          Obra[]
+  convenios      Convenio[]
+
+  @@index([estadoId])
+  @@index([slug])
+}
+
+model Usuario {
+  id           String    @id @default(cuid())
+  tenantId     String?   // null = DEV (acesso global)
+  tenant       Tenant?   @relation(fields: [tenantId], references: [id])
+  nome         String
+  email        String    @unique
+  senhaHash    String
+  nivel        String    @default("VIEWER")
+  // DEV | TENANT_ADMIN | GESTOR_PREFEITO | GESTOR_FAZENDA | GESTOR_SECRETARIO | VIEWER | DEMO
+  secretariaId String?
+  ativo        Boolean   @default(true)
+  ultimoAcesso DateTime?
+  criadoEm     DateTime  @default(now())
+
+  sessoes     Sessao[]
+  logs        LogAuditoria[]
+  alertasResp Alerta[]              @relation("AlertaResponsavel")
+  protocolos  Protocolo[]
+  tramitacoes TramitacaoProtocolo[]
+
+  @@index([tenantId])
+  @@index([email])
+}
+
+model Sessao {
+  id        String   @id @default(cuid())
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  token     String   @unique @default(cuid())
+  expiresAt DateTime
+  ip        String?
+  userAgent String?
+  criadoEm  DateTime @default(now())
+
+  @@index([token])
+  @@index([expiresAt])
+}
+
+// =====================================================================
+// MÓDULO 1 — ORGANIZAÇÃO DO ÓRGÃO
+// =====================================================================
+
+model Orgao {
+  id        String   @id @default(cuid())
+  tenantId  String?
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id])
+  nome      String
+  tipo      String   @default("PREFEITURA") // PREFEITURA | CAMARA | AUTARQUIA | FUNDO | FUNDACAO | CONSORCIO
+  cnpj      String?
+  municipio String
+  uf        String   @default("MG")
+  esfera    String   @default("MUNICIPAL")
+  codigo    String?  // código SICOM (01=Prefeitura, 02=Câmara...)
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+
+  exercicios  Exercicio[]
+  secretarias Secretaria[]
+
+  @@index([tenantId])
+}
+
+model Exercicio {
+  id        String   @id @default(cuid())
+  ano       Int
+  orgaoId   String
+  orgao     Orgao    @relation(fields: [orgaoId], references: [id])
+  aberto    Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+
+  receitas    Receita[]
+  dotacoes    DotacaoOrcamentaria[]
+  empenhos    Empenho[]
+  contratos   Contrato[]
+  licitacoes  Licitacao[]
+  saldos      SaldoContabil[]
+
+  @@unique([orgaoId, ano])
+}
+
+model Secretaria {
+  id          String  @id @default(cuid())
+  orgaoId     String
+  orgao       Orgao   @relation(fields: [orgaoId], references: [id])
+  nome        String
+  sigla       String?
+  codigo      String?
+  responsavel String?
+  ativa       Boolean @default(true)
+
+  unidades      UnidadeOrcamentaria[]
+  dotacoes      DotacaoOrcamentaria[]
+  empenhos      Empenho[]
+  contratos     Contrato[]
+  licitacoes    Licitacao[]
+  veiculos      Veiculo[]
+  movimentacoes MovimentacaoAlmoxarifado[]
+  patrimonios   Patrimonio[]
+  alertas       Alerta[]
+
+  @@index([orgaoId])
+}
+
+model UnidadeOrcamentaria {
+  id           String     @id @default(cuid())
+  secretariaId String
+  secretaria   Secretaria @relation(fields: [secretariaId], references: [id])
+  nome         String
+  codigo       String?
+
+  dotacoes DotacaoOrcamentaria[]
+  empenhos Empenho[]
+}
+
+// =====================================================================
+// MÓDULO 2 — RECEITAS
+// =====================================================================
+
+model Receita {
+  id              String    @id @default(cuid())
+  exercicioId     String
+  exercicio       Exercicio @relation(fields: [exercicioId], references: [id])
+  mes             Int
+  codigo          String?
+  descricao       String
+  fonte           String?
+  origem          String?
+  receitaPropria  Boolean   @default(false)
+  valorPrevisto   Float     @default(0)
+  valorArrecadado Float     @default(0)
+  dataArrecadacao DateTime?
+  unidadeGestora  String?
+
+  origemDado        String?
+  statusValidacao   String   @default("IMPORTADO")
+  dataImportacao    DateTime @default(now())
+  dataAtualizacao   DateTime @updatedAt
+  codigoExterno     String?
+  dataSincronizacao DateTime?
+
+  @@index([exercicioId, mes])
+}
+
+// =====================================================================
+// MÓDULO 3 — DESPESAS
+// =====================================================================
+
+model DotacaoOrcamentaria {
+  id             String               @id @default(cuid())
+  exercicioId    String
+  exercicio      Exercicio            @relation(fields: [exercicioId], references: [id])
+  secretariaId   String?
+  secretaria     Secretaria?          @relation(fields: [secretariaId], references: [id])
+  unidadeId      String?
+  unidade        UnidadeOrcamentaria? @relation(fields: [unidadeId], references: [id])
+  funcao         String?
+  subfuncao      String?
+  programa       String?
+  elemento       String?
+  fonteRecurso   String?
+  valorFixado    Float                @default(0)
+  valorEmpenhado Float                @default(0)
+  valorLiquidado Float                @default(0)
+  valorPago      Float                @default(0)
+  dataAtualizacao DateTime @updatedAt
+
+  @@index([exercicioId, secretariaId])
+}
+
+model Empenho {
+  id             String               @id @default(cuid())
+  exercicioId    String
+  exercicio      Exercicio            @relation(fields: [exercicioId], references: [id])
+  numero         String
+  data           DateTime
+  mes            Int
+  secretariaId   String?
+  secretaria     Secretaria?          @relation(fields: [secretariaId], references: [id])
+  unidadeId      String?
+  unidade        UnidadeOrcamentaria? @relation(fields: [unidadeId], references: [id])
+  fornecedorId   String?
+  fornecedor     Fornecedor?          @relation(fields: [fornecedorId], references: [id])
+  contratoId     String?
+  contrato       Contrato?            @relation(fields: [contratoId], references: [id])
+  funcao         String?
+  subfuncao      String?
+  elemento       String?
+  objeto         String?
+  fonteRecurso   String?
+  historico      String?
+  valorEmpenhado Float                @default(0)
+  valorLiquidado Float                @default(0)
+  valorPago      Float                @default(0)
+  dataLiquidacao DateTime?
+  dataPagamento  DateTime?
+
+  origemDado        String?
+  statusValidacao   String   @default("IMPORTADO")
+  dataImportacao    DateTime @default(now())
+  dataAtualizacao   DateTime @updatedAt
+  codigoExterno     String?
+  dataSincronizacao DateTime?
+
+  @@index([exercicioId, mes])
+  @@index([fornecedorId])
+  @@index([secretariaId])
+  @@index([elemento])
+  @@index([funcao])
+}
+
+model RestoAPagar {
+  id              String   @id @default(cuid())
+  tenantId        String?
+  exercicioOrigem Int
+  secretaria      String?
+  fornecedor      String?
+  valorInscrito   Float    @default(0)
+  valorPago       Float    @default(0)
+  valorCancelado  Float    @default(0)
+  processado      Boolean  @default(true)
+  criadoEm        DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+// =====================================================================
+// MÓDULO 4 — COMPRAS E LICITAÇÕES
+// =====================================================================
+
+model Licitacao {
+  id               String      @id @default(cuid())
+  exercicioId      String
+  exercicio        Exercicio   @relation(fields: [exercicioId], references: [id])
+  numeroProcesso   String
+  modalidade       String // PREGAO | CONCORRENCIA | TOMADA_PRECOS | CONVITE | DISPENSA | INEXIGIBILIDADE | ADESAO_ATA | CREDENCIAMENTO
+  objeto           String
+  secretariaId     String?
+  secretaria       Secretaria? @relation(fields: [secretariaId], references: [id])
+  fornecedorVencId String?
+  fornecedorVenc   Fornecedor? @relation(fields: [fornecedorVencId], references: [id])
+  valorEstimado    Float       @default(0)
+  valorContratado  Float       @default(0)
+  dataAbertura     DateTime?
+  dataHomologacao  DateTime?
+  situacao         String      @default("EM_ANDAMENTO") // EM_ANDAMENTO | HOMOLOGADO | CONCLUIDO | FRACASSADO | DESERTO | CANCELADO
+  compraDireta     Boolean     @default(false)
+
+  contratos Contrato[]
+  itens     ItemComprado[]
+
+  origemDado      String?
+  statusValidacao String   @default("IMPORTADO")
+  dataImportacao  DateTime @default(now())
+  codigoExterno   String?
+
+  @@index([exercicioId])
+}
+
+model Contrato {
+  id              String      @id @default(cuid())
+  exercicioId     String
+  exercicio       Exercicio   @relation(fields: [exercicioId], references: [id])
+  numero          String
+  objeto          String
+  fornecedorId    String?
+  fornecedor      Fornecedor? @relation(fields: [fornecedorId], references: [id])
+  secretariaId    String?
+  secretaria      Secretaria? @relation(fields: [secretariaId], references: [id])
+  licitacaoId     String?
+  licitacao       Licitacao?  @relation(fields: [licitacaoId], references: [id])
+  valorInicial    Float       @default(0)
+  valorAtualizado Float       @default(0)
+  dataInicio      DateTime?
+  dataFim         DateTime?
+  situacao        String      @default("VIGENTE") // VIGENTE | VENCIDO | ENCERRADO | SUSPENSO | RESCINDIDO
+
+  aditivos Aditivo[]
+  empenhos Empenho[]
+
+  origemDado      String?
+  statusValidacao String   @default("IMPORTADO")
+  dataImportacao  DateTime @default(now())
+  dataAtualizacao DateTime @updatedAt
+  codigoExterno   String?
+
+  @@index([exercicioId])
+  @@index([fornecedorId])
+}
+
+model Aditivo {
+  id            String    @id @default(cuid())
+  contratoId    String
+  contrato      Contrato  @relation(fields: [contratoId], references: [id])
+  numero        String
+  tipo          String?   // PRAZO | VALOR | PRAZO_VALOR
+  valor         Float     @default(0)
+  novaDataFim   DateTime?
+  data          DateTime?
+  justificativa String?
+}
+
+model AtaRegistroPreco {
+  id         String    @id @default(cuid())
+  tenantId   String?
+  tenant     Tenant?   @relation(fields: [tenantId], references: [id])
+  numero     String
+  objeto     String
+  fornecedor String?
+  valorTotal Float     @default(0)
+  dataInicio DateTime?
+  dataFim    DateTime?
+  situacao   String    @default("VIGENTE")
+
+  @@index([tenantId])
+}
+
+// =====================================================================
+// MÓDULO 5 — PRODUTOS E ALMOXARIFADO
+// =====================================================================
+
+model Produto {
+  id              String   @id @default(cuid())
+  tenantId        String?
+  tenant          Tenant?  @relation(fields: [tenantId], references: [id])
+  codigo          String?
+  descricao       String
+  categoria       String?
+  unidadeMedida   String?
+  estoqueAtual    Float    @default(0)
+  estoqueMinimo   Float    @default(0)
+  custoMedio      Float    @default(0)
+  ultimoPrecoUnit Float    @default(0)
+  criadoEm        DateTime @default(now())
+
+  movimentacoes MovimentacaoAlmoxarifado[]
+  itens         ItemComprado[]
+
+  @@index([tenantId, categoria])
+}
+
+model MovimentacaoAlmoxarifado {
+  id            String      @id @default(cuid())
+  produtoId     String
+  produto       Produto     @relation(fields: [produtoId], references: [id])
+  tipo          String      // ENTRADA | SAIDA
+  quantidade    Float
+  valorUnitario Float       @default(0)
+  secretariaId  String?
+  secretaria    Secretaria? @relation(fields: [secretariaId], references: [id])
+  data          DateTime
+  documento     String?
+
+  @@index([produtoId, data])
+}
+
+model ItemComprado {
+  id            String      @id @default(cuid())
+  licitacaoId   String?
+  licitacao     Licitacao?  @relation(fields: [licitacaoId], references: [id])
+  produtoId     String?
+  produto       Produto?    @relation(fields: [produtoId], references: [id])
+  fornecedorId  String?
+  fornecedor    Fornecedor? @relation(fields: [fornecedorId], references: [id])
+  descricao     String
+  quantidade    Float       @default(0)
+  valorUnitario Float       @default(0)
+  valorTotal    Float       @default(0)
+  data          DateTime?
+  origemImport  String?
+
+  @@index([produtoId])
+  @@index([origemImport])
+}
+
+// =====================================================================
+// MÓDULO 6 — PATRIMÔNIO
+// =====================================================================
+
+model Patrimonio {
+  id                String      @id @default(cuid())
+  numero            String
+  descricao         String
+  categoria         String?
+  localizacao       String?
+  responsavel       String?
+  estadoConservacao String?     // OTIMO | BOM | REGULAR | RUIM | INSERVIVEL
+  valorAquisicao    Float       @default(0)
+  dataAquisicao     DateTime?
+  secretariaId      String?
+  secretaria        Secretaria? @relation(fields: [secretariaId], references: [id])
+  baixado           Boolean     @default(false)
+  dataBaixa         DateTime?
+}
+
+// =====================================================================
+// MÓDULO 7 — VEÍCULOS E FROTA
+// =====================================================================
+
+model Veiculo {
+  id                      String      @id @default(cuid())
+  placa                   String      @unique
+  modelo                  String
+  marca                   String?
+  ano                     Int?
+  tipoCombustivel         String?
+  capacidadeTanque        Float?
+  quilometragem           Float       @default(0)
+  situacao                String      @default("ATIVO")   // ATIVO | PARADO | MANUTENCAO | BAIXADO
+  secretariaId            String?
+  secretaria              Secretaria? @relation(fields: [secretariaId], references: [id])
+  condutorResponsavel     String?
+  documentacaoOk          Boolean     @default(true)
+  vencimentoLicenciamento DateTime?
+  criadoEm                DateTime    @default(now())
+
+  abastecimentos Abastecimento[]
+  manutencoes    Manutencao[]
+}
+
+model Abastecimento {
+  id            String      @id @default(cuid())
+  veiculoId     String
+  veiculo       Veiculo     @relation(fields: [veiculoId], references: [id])
+  data          DateTime
+  litros        Float
+  valorTotal    Float       @default(0)
+  quilometragem Float?
+  fornecedorId  String?
+  fornecedor    Fornecedor? @relation(fields: [fornecedorId], references: [id])
+
+  @@index([veiculoId, data])
+}
+
+model Manutencao {
+  id           String      @id @default(cuid())
+  veiculoId    String
+  veiculo      Veiculo     @relation(fields: [veiculoId], references: [id])
+  data         DateTime
+  tipo         String?     // PREVENTIVA | CORRETIVA
+  descricao    String?
+  valor        Float       @default(0)
+  fornecedorId String?
+  fornecedor   Fornecedor? @relation(fields: [fornecedorId], references: [id])
+
+  @@index([veiculoId, data])
+}
+
+// =====================================================================
+// MÓDULO 8 — FORNECEDORES
+// =====================================================================
+
+model Fornecedor {
+  id               String   @id @default(cuid())
+  tenantId         String?
+  tenant           Tenant?  @relation(fields: [tenantId], references: [id])
+  nome             String
+  nomeNormalizado  String?
+  documento        String?
+  tipoPessoa       String   @default("PJ")  // PJ | PF
+  ramoAtividade    String?
+  cadastroCompleto Boolean  @default(false)
+  criadoEm         DateTime @default(now())
+
+  empenhos       Empenho[]
+  contratos      Contrato[]
+  licitacoes     Licitacao[]
+  itens          ItemComprado[]
+  abastecimentos Abastecimento[]
+  manutencoes    Manutencao[]
+
+  @@index([tenantId])
+  @@index([documento])
+}
+
+// =====================================================================
+// OBRAS E CONVÊNIOS
+// =====================================================================
+
+model Obra {
+  id                 String    @id @default(cuid())
+  tenantId           String?
+  tenant             Tenant?   @relation(fields: [tenantId], references: [id])
+  descricao          String
+  secretaria         String?
+  valorContratado    Float     @default(0)
+  valorExecutado     Float     @default(0)
+  percentualExecucao Float     @default(0)
+  situacao           String    @default("EM_ANDAMENTO")
+  dataInicio         DateTime?
+  dataPrevista       DateTime?
+
+  @@index([tenantId])
+}
+
+model Convenio {
+  id             String    @id @default(cuid())
+  tenantId       String?
+  tenant         Tenant?   @relation(fields: [tenantId], references: [id])
+  numero         String
+  objeto         String
+  concedente     String?
+  valorTotal     Float     @default(0)
+  valorRepassado Float     @default(0)
+  contrapartida  Float     @default(0)
+  dataInicio     DateTime?
+  dataFim        DateTime?
+  situacao       String    @default("VIGENTE")
+
+  @@index([tenantId])
+}
+
+// =====================================================================
+// MÓDULO 9 — FOLHA DE PAGAMENTO (agregada — conformidade LGPD)
+// =====================================================================
+
+model FolhaPagamento {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id])
+  ano              Int
+  mes              Int
+  orgaoCodigo      String?
+  secretariaNome   String?
+
+  // Totais agregados (sem dados individuais — LGPD)
+  totalBruto       Float    @default(0)
+  totalLiquido     Float    @default(0)
+  totalDescontos   Float    @default(0)
+  totalIRRF        Float    @default(0)
+  totalPrevidencia Float    @default(0)
+  qtdServidores    Int      @default(0)
+  qtdAtivos        Int      @default(0)
+  qtdInativos      Int      @default(0)
+  qtdComissionados Int      @default(0)
+
+  origemDado  String?
+  importadoEm DateTime @default(now())
+
+  @@index([tenantId, ano, mes])
+  @@unique([tenantId, ano, mes, orgaoCodigo, secretariaNome])
+}
+
+// =====================================================================
+// MÓDULO 10 — SALDOS CONTÁBEIS (PCASP/SICOM Balancete)
+// =====================================================================
+
+model SaldoContabil {
+  id               String    @id @default(cuid())
+  exercicioId      String
+  exercicio        Exercicio @relation(fields: [exercicioId], references: [id])
+  municipio        String?
+  orgaoCodigo      String?
+  mes              Int
+  conta            String
+  contaNome        String?
+  classe           String
+  saldoAnterior    Float     @default(0)
+  naturezaAnterior String?
+  debito           Float     @default(0)
+  credito          Float     @default(0)
+  saldoAtual       Float     @default(0)
+  naturezaAtual    String?
+  fonte            String?
+  importadoEm      DateTime  @default(now())
+
+  @@index([exercicioId, mes])
+  @@index([classe])
+  @@index([conta])
+}
+
+// =====================================================================
+// MÓDULO 11 — ÍNDICES CONSTITUCIONAIS E MONITORAMENTO
+// =====================================================================
+
+model IndiceConstitucional {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  exercicio    Int
+  mes          Int?     // null = índice anual
+  tipo         String
+  // SAUDE | MDE | FUNDEB_PROF | FUNDEB_RECEBIDO | PESSOAL | CAMARA
+  // DIVIDA | RESULT_PRIMARIO | RCLE | TRANSFERENCIAS | IEGM
+
+  valorBase    Float    @default(0)  // RCL, impostos, etc.
+  valorAplicado Float   @default(0)  // valor gasto/apurado
+  percentual   Float    @default(0)
+  limiteMinimo Float?                // mínimo exigido (ex: 15 para saúde)
+  limiteMaximo Float?                // máximo permitido (ex: 54 para pessoal)
+  status       String   @default("PENDENTE") // OK | ALERTA | CRITICO | PENDENTE
+  fonte        String?  // SICOM | SICONFI | CALCULADO
+  observacao   String?
+  calculadoEm  DateTime @default(now())
+
+  @@unique([tenantId, exercicio, mes, tipo])
+  @@index([tenantId, exercicio, tipo])
+}
+
+// =====================================================================
+// MÓDULO 12 — IEGM HISTÓRICO (TCE-MG)
+// =====================================================================
+
+model IEGMHistorico {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  exercicio     Int
+
+  iSaude        Float?
+  iEducacao     Float?
+  iFiscal       Float?
+  iCidades      Float?
+  iPlanejamento Float?
+  iGoverancaTI  Float?
+  iAmbiente     Float?
+  totalGeral    Float?
+  faixaGeral    String?  // A+ | A | B | C | D | E
+  posicaoEstado Int?
+
+  // Recomendações para melhoria de indicadores
+  recomendacoes String?  // JSON array de recomendações por sub-índice
+
+  fonte       String   @default("TCE_MG")
+  importadoEm DateTime @default(now())
+
+  @@unique([tenantId, exercicio])
+  @@index([tenantId])
+}
+
+// =====================================================================
+// MÓDULO 13 — EMENDAS PARLAMENTARES
+// =====================================================================
+
+model EmendaParlamentar {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id])
+  esfera           String   // FEDERAL | ESTADUAL
+  exercicio        Int
+  parlamentar      String
+  partido          String?
+  tipo             String   // INDIVIDUAL | BANCADA | RELATOR | IMPOSITIVA
+  programa         String?
+  objeto           String?
+  valorTransferido Float    @default(0)
+  valorExecutado   Float    @default(0)
+  situacao         String?
+  convenioId       String?
+  fonte            String?  // PORTAL_TRANSPARENCIA | ALMG | SICONFI
+
+  importadoEm DateTime @default(now())
+
+  @@index([tenantId, exercicio])
+  @@index([esfera, exercicio])
+}
+
+// =====================================================================
+// MÓDULO 14 — TRANSFERÊNCIAS CONSTITUCIONAIS
+// =====================================================================
+
+model TransferenciaConstitucional {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id])
+  exercicio        Int
+  mes              Int
+  tipo             String   // FPM | ICMS | IPVA | IPI | ITR | LC87 | FUNDEB_RECEBIDO | CIDE | ROYALTIES
+  valorTransferido Float    @default(0)
+  valorPrevisto    Float    @default(0)
+  fonte            String   @default("SICONFI")
+  importadoEm      DateTime @default(now())
+
+  @@unique([tenantId, exercicio, mes, tipo])
+  @@index([tenantId, exercicio, mes])
+}
+
+// =====================================================================
+// MÓDULO 15 — LEIS, NORMAS E LEI ORGÂNICA
+// =====================================================================
+
+model LeiMunicipal {
+  id             String    @id @default(cuid())
+  tenantId       String
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
+  numero         String
+  tipo           String    // LEI | DECRETO | PORTARIA | RESOLUCAO | EMENDA | PPA | LDO | LOA | INSTRUCAO
+  ano            Int
+  ementa         String
+  texto          String?
+  url            String?
+  dataPublicacao DateTime?
+  categoria      String?   // ORCAMENTO | LICITACAO | PESSOAL | TRIBUTARIA | GERAL
+  vigente        Boolean   @default(true)
+
+  // Vínculos opcionais para rastreabilidade legal
+  empenhoId   String?
+  contratoId  String?
+  licitacaoId String?
+
+  criadoEm DateTime @default(now())
+
+  @@index([tenantId, tipo, ano])
+}
+
+model LeiOrganica {
+  id              String    @id @default(cuid())
+  tenantId        String    @unique
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  numero          String?
+  dataPromulgacao DateTime?
+  texto           String?   // texto completo para validação
+  url             String?
+  versao          String?
+  vigente         Boolean   @default(true)
+  importadoEm     DateTime  @default(now())
+}
+
+// =====================================================================
+// MÓDULO 16 — PROTOCOLO E TRAMITAÇÃO INTERNA
+// =====================================================================
+
+model Protocolo {
+  id           String    @id @default(cuid())
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  numero       String    // formato: ANO/SEQUENCIAL (ex: 2026/00001)
+  tipo         String    // OFICIO | REQUERIMENTO | PROCESSO | SOLICITACAO | INFORMACAO | DENUNCIA | OUTRO
+  assunto      String
+  descricao    String?
+  origemSetor  String?
+  destinoSetor String?
+  prioridade   String    @default("NORMAL")  // BAIXA | NORMAL | ALTA | URGENTE
+  status       String    @default("ABERTO")  // ABERTO | EM_TRAMITE | AGUARDANDO | CONCLUIDO | ARQUIVADO
+  secretariaId String?
+  usuarioId    String?
+  usuario      Usuario?  @relation(fields: [usuarioId], references: [id])
+  prazo        DateTime?
+  concluidoEm  DateTime?
+
+  // Vínculos opcionais
+  empenhoId   String?
+  contratoId  String?
+  licitacaoId String?
+
+  criadoEm     DateTime  @default(now())
+  atualizadoEm DateTime  @updatedAt
+
+  tramitacoes TramitacaoProtocolo[]
+  documentos  DocumentoProtocolo[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, numero])
+}
+
+model TramitacaoProtocolo {
+  id          String    @id @default(cuid())
+  protocoloId String
+  protocolo   Protocolo @relation(fields: [protocoloId], references: [id], onDelete: Cascade)
+  de          String?
+  para        String
+  acao        String    // ENCAMINHAR | DESPACHAR | CONCLUIR | DEVOLVER | ARQUIVAR | INFORMAR
+  observacao  String?
+  usuarioId   String?
+  usuario     Usuario?  @relation(fields: [usuarioId], references: [id])
+  data        DateTime  @default(now())
+
+  @@index([protocoloId])
+}
+
+model DocumentoProtocolo {
+  id          String    @id @default(cuid())
+  protocoloId String
+  protocolo   Protocolo @relation(fields: [protocoloId], references: [id], onDelete: Cascade)
+  nome        String
+  tipo        String?
+  tamanhoKb   Int?
+  url         String?
+  criadoEm    DateTime  @default(now())
+}
+
+// =====================================================================
+// MÓDULO 17 — INTEGRAÇÕES EXTERNAS (API Slots)
+// =====================================================================
+
+model IntegracaoConfig {
+  id          String   @id @default(cuid())
+  tenantId    String?  // null = disponível a todos os tenants
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+  tipo        String
+  // SICOM_TCE_MG | SICONFI | PNCP | TCE_DADOS_ABERTOS | TESOURO_TRANSPARENTE
+  // PORTAL_TRANSPARENCIA | IBGE | RADAR_TRANSPARENCIA | IEGM_MG | BANCO_PRECOS
+  // CENSO_ESCOLAR | LEGISWEB | CAPMG | SISOP_MG | EMENDAS_ESTADUAIS | MCASP | CUSTOM
+  nome        String
+  descricao   String?
+  ativo       Boolean  @default(false)
+  config      String   @default("{}") // JSON: url, token, params, municipioIBGE, etc.
+  ultimoSync  DateTime?
+  proximoSync DateTime?
+  criadoEm    DateTime @default(now())
+
+  @@index([tenantId, tipo])
+}
+
+// =====================================================================
+// MÓDULO 18 — PARÂMETROS TÉCNICOS (MCASP/MDF/LRF)
+// =====================================================================
+
+model ParametroTecnico {
+  id             String    @id @default(cuid())
+  exercicio      Int
+  tipo           String    // MCASP | MDF | LIMITE_LRF | IEGM_PESO | CUSTOM
+  chave          String    // ex: LIMITE_PESSOAL_EXECUTIVO, PCT_MDE_MINIMO
+  valor          String    // número, JSON ou texto livre
+  descricao      String?
+  vigenciaInicio DateTime
+  vigenciaFim    DateTime?
+  criadoEm       DateTime  @default(now())
+
+  @@unique([exercicio, tipo, chave])
+  @@index([exercicio, tipo])
+}
+
+// =====================================================================
+// MOTOR DE ALERTAS
+// =====================================================================
+
+model Alerta {
+  id               String      @id @default(cuid())
+  tenantId         String?
+  tenant           Tenant?     @relation(fields: [tenantId], references: [id])
+  codigo           String      @unique
+  tipo             String
+  gravidade        String      // VERDE | AMARELO | LARANJA | VERMELHO
+  titulo           String
+  descricao        String
+  recomendacao     String?
+  valorEnvolvido   Float?
+  secretariaId     String?
+  secretaria       Secretaria? @relation(fields: [secretariaId], references: [id])
+  entidadeOrigem   String?
+  entidadeOrigemId String?
+  prazoSugerido    DateTime?
+  status           String      @default("NOVO")
+  // NOVO | EM_ANALISE | AGUARDANDO_SECRETARIA | JUSTIFICADO | CORRIGIDO | RESOLVIDO | ESCALADO | ARQUIVADO
+  providencia      String?
+  justificativa    String?
+  responsavelId    String?
+  responsavel      Usuario?    @relation("AlertaResponsavel", fields: [responsavelId], references: [id])
+  dataIdentificacao DateTime   @default(now())
+  dataResolucao    DateTime?
+
+  @@index([tenantId, gravidade, status])
+  @@index([secretariaId])
+}
+
+// =====================================================================
+// SEGURANÇA E AUDITORIA
+// =====================================================================
+
+model LogAuditoria {
+  id         String   @id @default(cuid())
+  usuarioId  String?
+  usuario    Usuario? @relation(fields: [usuarioId], references: [id])
+  acao       String
+  entidade   String?
+  entidadeId String?
+  detalhes   String?
+  ip         String?
+  criadoEm   DateTime @default(now())
+
+  @@index([criadoEm])
+  @@index([usuarioId])
+}
+
+model RelatorioEmitido {
+  id           String   @id @default(cuid())
+  tenantId     String?
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id])
+  tipo         String
+  periodo      String
+  destinatario String?
+  formato      String   @default("PDF")
+  geradoPor    String?
+  criadoEm     DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+// =====================================================================
+// CONFIGURAÇÃO E IMPORTAÇÃO
+// =====================================================================
+
+model FonteDado {
+  id          String      @id @default(cuid())
+  tenantId    String?
+  tenant      Tenant?     @relation(fields: [tenantId], references: [id])
+  nome        String
+  tipo        String      // PLANILHA | CSV | RELATORIO_CONTABIL | API
+  descricao   String?
+  ativa       Boolean     @default(true)
+  importacoes Importacao[]
+
+  @@index([tenantId])
+}
+
+model Importacao {
+  id                 String     @id @default(cuid())
+  tenantId           String?
+  tenant             Tenant?    @relation(fields: [tenantId], references: [id])
+  tipoDado           String
+  nomeArquivo        String
+  fonteId            String?
+  fonte              FonteDado? @relation(fields: [fonteId], references: [id])
+  usuarioResponsavel String?
+  totalRegistros     Int        @default(0)
+  registrosOk        Int        @default(0)
+  registrosErro      Int        @default(0)
+  status             String     @default("PROCESSADO")
+  detalhes           String?
+  criadoEm           DateTime   @default(now())
+
+  @@index([tenantId])
+}
+
+model Parametro {
+  id           String   @id @default(cuid())
+  chave        String   @unique
+  valor        String
+  descricao    String?
+  unidade      String?
+  atualizadoEm DateTime @updatedAt
+}
