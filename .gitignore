@@ -29,3 +29,23 @@ next-env.d.ts
 # Uploads e dados importados locais
 /uploads/
 /data/
+
+# ── 28/10/2026 — o que NAO pode entrar no historico deste repositorio ──────────
+# ESTE REPOSITORIO TEM REMOTE PUBLICO (github.com/Lucasjbdias/gh-auth-login, conferido
+# por GET anonimo em 28/10/2026: "private": false). Entao nada aqui e "so local": basta
+# um push para o conteudo ficar publico, e do historico do git nao se tira.
+#
+# Dados reais do municipio de Matozinhos: 322 remessas .zip do SICOM. MEDIDO: 238 MB.
+Sicom_Matozinhos/
+
+# Extracoes do banco, e uma delas e folha de pagamento INDIVIDUAL: MANAD.TXT tem
+# 48.751.037 bytes. MEDIDO: 49 MB na pasta. Dado de pessoa nao vai para repositorio
+# publico, e nem para privado sem necessidade.
+Dados-banco/
+
+# Manuais e tabelas de referencia do TCE-MG baixados para consulta (10 PDF + 10 XLSX na
+# raiz). Sao documentos publicos do Tribunal, mas sao PESADOS e regeravel por download:
+# o lugar deles e o disco de quem consulta, nao o versionamento do sistema.
+/*.pdf
+/*.xlsx
+/*.XLS
