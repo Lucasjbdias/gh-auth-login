@@ -62,9 +62,10 @@ model Tenant {
   produtos       Produto[]
   alertas        Alerta[]
   relatorios     RelatorioEmitido[]
-  atasRegistro   AtaRegistroPreco[]
-  obras          Obra[]
-  convenios      Convenio[]
+  atasRegistro     AtaRegistroPreco[]
+  obras            Obra[]
+  convenios        Convenio[]
+  caucStatusChecks CaucStatusCheck[]
 
   @@index([estadoId])
   @@index([slug])
@@ -256,8 +257,10 @@ model Empenho {
   contrato       Contrato?            @relation(fields: [contratoId], references: [id])
   funcao         String?
   subfuncao      String?
+  programa       String?
   elemento       String?
   objeto         String?
+  numProcesso    String?
   fonteRecurso   String?
   historico      String?
   valorEmpenhado Float                @default(0)
@@ -610,6 +613,28 @@ model FolhaPagamento {
 
   @@index([tenantId, ano, mes])
   @@unique([tenantId, ano, mes, orgaoCodigo, secretariaNome])
+}
+
+// =====================================================================
+// MÓDULO 9b — TABELA DE RUBRICAS (Folha — referência de verbas)
+// =====================================================================
+
+model TabelaRubrica {
+  id          String   @id @default(cuid())
+  verba       String   @unique
+  descricao   String
+  irrf        Boolean  @default(false)
+  irrf13      Boolean  @default(false)
+  irrfFerias  Boolean  @default(false)
+  rgps        Boolean  @default(false)
+  rgps13      Boolean  @default(false)
+  rpps        Boolean  @default(false)
+  rpps13      Boolean  @default(false)
+  fgts        Boolean  @default(false)
+  fgts13      Boolean  @default(false)
+  importadoEm DateTime @default(now())
+
+  @@index([verba])
 }
 
 // =====================================================================
@@ -1001,4 +1026,129 @@ model Parametro {
   descricao    String?
   unidade      String?
   atualizadoEm DateTime @updatedAt
+}
+
+// =====================================================================
+// MÓDULO 19 — CAUC: Sistema de Informações sobre Requisitos Fiscais (STN)
+// =====================================================================
+
+model CaucStatusCheck {
+  id           String   @id @default(cuid())
+  tenantId     String?
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id])
+  municipio    String
+  idEnte       Int?     // ID numérico no CAUC (obtido via /ente/obter-por-texto)
+  nomeEnte     String?  // Nome oficial conforme CAUC
+  cnpj         String?
+  status       String   // REGULAR | IRREGULAR | NAO_ENCONTRADO | ERRO
+  situacao     Int?     // 1=Regular, 0=Irregular, null=desconhecido
+  erro         String?  // mensagem de erro quando status=ERRO
+  verificadoEm DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([verificadoEm])
+  @@index([status])
+}
+
+// =====================================================================
+// MÓDULO 20 — COMUNICAR: WORKFLOW DE COMUNICAÇÃO COM PROTOCOLO
+// =====================================================================
+
+model Destinatario {
+  id       String   @id @default(cuid())
+  nome     String
+  email    String
+  cargo    String?
+  setor    String?
+  telefone String?
+  ativo    Boolean  @default(true)
+  criadoEm DateTime @default(now())
+
+  protocolosVinculados ProtocoloComEmail[]
+}
+
+model ProtocoloComEmail {
+  id             String              @id @default(cuid())
+  protocoloId    String
+  destinatarioId String
+  papel          String              @default("RESPONSAVEL") // RESPONSAVEL | CC
+  protocolo      ComunicacaoProtocolo @relation(fields: [protocoloId], references: [id], onDelete: Cascade)
+  destinatario   Destinatario         @relation(fields: [destinatarioId], references: [id])
+
+  @@unique([protocoloId, destinatarioId])
+  @@index([protocoloId])
+}
+
+model ComunicacaoProtocolo {
+  id          String    @id @default(cuid())
+  numero      String
+  titulo      String
+  descricao   String?
+  tipo        String    @default("COMUNICACAO")
+  // COMUNICACAO | NOTIFICACAO | ADVERTENCIA | OFICIO | SOLICITACAO
+
+  origemTipo  String?   // CAUC | ALERTA | MANUAL
+  origemId    String?   // ID do CaucStatusCheck ou Alerta
+  municipio   String?
+
+  status      String    @default("ABERTO")
+  // ABERTO | AGUARDANDO_RESPOSTA | EM_PRAZO | VENCIDO | RESOLVIDO | ARQUIVADO
+
+  prioridade  String    @default("NORMAL") // BAIXA | NORMAL | ALTA | URGENTE
+  prazo       DateTime?
+  resolvidoEm DateTime?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  destinatarios ProtocoloComEmail[]
+  emails        EmailProtocolo[]
+  tramitacoes   TramitacaoCom[]
+
+  @@index([status])
+  @@index([origemTipo])
+}
+
+model EmailProtocolo {
+  id          String               @id @default(cuid())
+  protocoloId String
+  protocolo   ComunicacaoProtocolo @relation(fields: [protocoloId], references: [id], onDelete: Cascade)
+  tipo        String               // INICIAL | LEMBRETE | ESCALONAMENTO | NOTA_INTERNA
+  assunto     String
+  corpo       String
+  paraEmails  String               // JSON: ["email1","email2"]
+  status      String               @default("RASCUNHO") // RASCUNHO | ENVIADO | FALHOU
+  erro        String?
+  enviadoEm   DateTime?
+  criadoEm    DateTime             @default(now())
+
+  @@index([protocoloId])
+}
+
+model TramitacaoCom {
+  id          String               @id @default(cuid())
+  protocoloId String
+  protocolo   ComunicacaoProtocolo @relation(fields: [protocoloId], references: [id], onDelete: Cascade)
+  acao        String
+  // CRIADO | EMAIL_ENVIADO | LEMBRETE_ENVIADO | ESCALONADO | PRAZO_ALTERADO
+  // STATUS_ALTERADO | RESOLVIDO | ARQUIVADO | NOTA
+  descricao   String?
+  por         String?
+  criadoEm    DateTime             @default(now())
+
+  @@index([protocoloId])
+}
+
+model ConfigEmail {
+  id             String    @id @default(cuid())
+  host           String
+  porta          Int       @default(587)
+  seguro         Boolean   @default(false)
+  usuario        String
+  senha          String
+  nomeRemetente  String
+  emailRemetente String
+  ativo          Boolean   @default(true)
+  testadoEm      DateTime?
+  criadoEm       DateTime  @default(now())
 }
