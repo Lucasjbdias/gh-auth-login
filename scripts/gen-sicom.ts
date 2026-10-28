@@ -4,7 +4,7 @@ import * as path from "node:path";
 
 // Gera os dicionários SICOM (JSON) a partir das tabelas oficiais TCE-MG 2026.
 // Uso: tsx scripts/gen-sicom.ts
-const BASE = "C:\\Projetos\\franca-dias-gestorIA";
+const BASE = "D:\\Projetos\\franca-dias-gestorIA";
 const OUT = path.resolve("src/lib/sicom/data");
 fs.mkdirSync(OUT, { recursive: true });
 

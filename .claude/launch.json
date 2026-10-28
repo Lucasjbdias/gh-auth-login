@@ -2,10 +2,11 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "GesIA Dev",
+      "name": "GesIA",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 3003
+      "port": 3003,
+      "autoPort": false
     }
   ]
 }
