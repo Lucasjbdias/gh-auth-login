@@ -47,11 +47,25 @@ export function UploadForm() {
 
     setEnviando(true);
     try {
-      const fd = new FormData();
-      fd.append("file", arquivo);
-      fd.append("tipoDado", tipoDado); // vazio = detecção automática
+      // Arquivos > 3 MB usam Content-Type: application/octet-stream para contornar
+      // o limite de 4 MB do req.formData() no Next.js App Router.
+      const LIMITE_FORM_DATA = 3 * 1024 * 1024;
+      let resp: Response;
 
-      const resp = await fetch("/api/importacao", { method: "POST", body: fd });
+      if (arquivo.size > LIMITE_FORM_DATA) {
+        const params = new URLSearchParams({ filename: arquivo.name, tipoDado });
+        resp = await fetch(`/api/importacao?${params}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/octet-stream" },
+          body: arquivo,
+        });
+      } else {
+        const fd = new FormData();
+        fd.append("file", arquivo);
+        fd.append("tipoDado", tipoDado);
+        resp = await fetch("/api/importacao", { method: "POST", body: fd });
+      }
+
       const dados = await resp.json().catch(() => null);
 
       if (!resp.ok) {

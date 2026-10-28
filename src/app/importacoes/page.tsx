@@ -9,6 +9,7 @@ import {
   Badge,
 } from "@/components/ui";
 import { UploadForm } from "./UploadForm";
+import { AnalisadorIA } from "./AnalisadorIA";
 
 export const dynamic = "force-dynamic";
 
@@ -50,11 +51,18 @@ export default async function Pagina() {
         descricao="Validação e registro de arquivos de dados para o sistema."
       />
 
-      <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-        Nesta versão a importação <strong>valida e registra</strong> o arquivo
-        enviado (contagem de linhas e detecção de colunas faltando). A
-        persistência dos dados de negócio por tipo virá em uma próxima versão.
-      </div>
+      {/* Menu IA — análise inteligente de arquivos */}
+      <Card className="mb-6 border-purple-200 bg-gradient-to-br from-purple-50 to-white">
+        <div className="mb-3 flex items-center gap-2">
+          <span className="text-xl">🤖</span>
+          <CardTitulo>Análise Inteligente (IA)</CardTitulo>
+        </div>
+        <p className="mb-4 text-sm text-slate-600">
+          Selecione qualquer arquivo de dados e a IA identificará o formato, os campos disponíveis,
+          o importador recomendado e extrairá os principais insights antes da importação.
+        </p>
+        <AnalisadorIA />
+      </Card>
 
       <Card className="mb-6">
         <CardTitulo>Nova importação</CardTitulo>
