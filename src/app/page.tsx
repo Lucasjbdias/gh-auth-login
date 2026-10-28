@@ -16,6 +16,25 @@ import { moeda, moedaCompacta, percentual, data, nomeMes } from "@/lib/format";
 import { PageHeader, Card, CardTitulo, StatCard, Tabela, EmptyState, BarraProporcao } from "@/components/ui";
 import { GraficoLinhaMensal } from "@/components/Charts";
 
+const COR_CAUC: Record<string, string> = {
+  REGULAR: "text-green-600 bg-green-50 border-green-200",
+  IRREGULAR: "text-red-600 bg-red-50 border-red-200",
+  NAO_ENCONTRADO: "text-yellow-600 bg-yellow-50 border-yellow-200",
+  ERRO: "text-slate-500 bg-slate-50 border-slate-200",
+};
+const DOT_CAUC: Record<string, string> = {
+  REGULAR: "bg-green-500",
+  IRREGULAR: "bg-red-500 animate-pulse",
+  NAO_ENCONTRADO: "bg-yellow-400",
+  ERRO: "bg-slate-400",
+};
+const LABEL_CAUC: Record<string, string> = {
+  REGULAR: "Regular",
+  IRREGULAR: "IRREGULAR",
+  NAO_ENCONTRADO: "Não encontrado",
+  ERRO: "Erro",
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function VisaoGeral() {
@@ -36,7 +55,7 @@ export default async function VisaoGeral() {
   }
 
   const exId = exercicio.id;
-  const [rec, desp, porSec, forns, vencendo, frota, estoque, alertas, recMensal, alertasCriticos, maioresDespesas] =
+  const [rec, desp, porSec, forns, vencendo, frota, estoque, alertas, recMensal, alertasCriticos, maioresDespesas, caucChecks] =
     await Promise.all([
       resumoReceitas(exId),
       resumoDespesas(exId),
@@ -53,6 +72,15 @@ export default async function VisaoGeral() {
         orderBy: { gravidade: "asc" },
       }),
       db.empenho.findMany({ where: { exercicioId: exId }, orderBy: { valorEmpenhado: "desc" }, take: 5, include: { fornecedor: true, secretaria: true } }),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ((db as any).caucStatusCheck
+        ? (db as any).caucStatusCheck.findMany({ orderBy: { verificadoEm: "desc" }, take: 60 }).then(
+            (rows: Array<{ tenantId?: string; municipio: string; [k: string]: unknown }>) => {
+              const seen = new Set<string>()
+              return rows.filter((r) => { const k = r.tenantId ?? r.municipio; if (seen.has(k)) return false; seen.add(k); return true }).slice(0, 10)
+            }
+          )
+        : Promise.resolve([])),
     ]);
 
   const totalSec = porSec.reduce((s, p) => s + p.valor, 0);
@@ -119,6 +147,37 @@ export default async function VisaoGeral() {
                 Ver todos os alertas →
               </Link>
             </ul>
+          )}
+        </Card>
+
+        {/* CAUC — Requisitos Fiscais */}
+        <Card className="lg:col-span-3">
+          <div className="flex items-center justify-between">
+            <CardTitulo>CAUC — Situação dos Municípios</CardTitulo>
+            <Link href="/cauc" className="text-xs font-medium text-brand-600 hover:underline">
+              Ver detalhes →
+            </Link>
+          </div>
+          {caucChecks.length === 0 ? (
+            <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <p className="text-sm text-slate-600">Nenhuma verificação CAUC realizada ainda.</p>
+              <Link href="/cauc" className="rounded-md bg-brand-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-600">
+                Verificar agora
+              </Link>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {(caucChecks as Array<{ id: string; status: string; municipio: string; nomeEnte: string | null; verificadoEm: string }>).map((c) => (
+                <div
+                  key={c.id}
+                  className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${COR_CAUC[c.status] ?? COR_CAUC.ERRO}`}
+                  title={`Verificado em ${new Date(c.verificadoEm).toLocaleString("pt-BR")}`}
+                >
+                  <span className={`h-2 w-2 rounded-full ${DOT_CAUC[c.status] ?? DOT_CAUC.ERRO}`} />
+                  {c.municipio} — {LABEL_CAUC[c.status] ?? c.status}
+                </div>
+              ))}
+            </div>
           )}
         </Card>
 

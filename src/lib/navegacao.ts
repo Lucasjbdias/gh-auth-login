@@ -5,7 +5,7 @@ export interface ItemMenu {
   label: string;
   /** ícone como emoji simples para o MVP (sem dependência de libs de ícones). */
   icone: string;
-  grupo: "Gestão" | "Cadastros" | "Inteligência" | "Sistema" | "Ajuda";
+  grupo: "Gestão" | "Cadastros" | "Inteligência" | "Comunicar" | "Sistema" | "Ajuda";
 }
 
 export const MENU: ItemMenu[] = [
@@ -21,6 +21,10 @@ export const MENU: ItemMenu[] = [
   { href: "/veiculos", label: "Veículos", icone: "🚗", grupo: "Cadastros" },
   { href: "/fornecedores", label: "Fornecedores", icone: "🏢", grupo: "Cadastros" },
   { href: "/alertas", label: "Alertas", icone: "🚨", grupo: "Inteligência" },
+  { href: "/cauc", label: "CAUC", icone: "🔒", grupo: "Inteligência" },
+  { href: "/comunicar", label: "Protocolos", icone: "📨", grupo: "Comunicar" },
+  { href: "/comunicar/destinatarios", label: "Destinatários", icone: "👥", grupo: "Comunicar" },
+  { href: "/comunicar/config-email", label: "Config. Email", icone: "📧", grupo: "Comunicar" },
   { href: "/comparativo", label: "Comparativo Anual", icone: "📈", grupo: "Inteligência" },
   { href: "/consultor", label: "Consultor de Dados", icone: "🤖", grupo: "Inteligência" },
   { href: "/relatorios", label: "Relatórios", icone: "📄", grupo: "Inteligência" },
@@ -34,4 +38,4 @@ export const MENU: ItemMenu[] = [
   { href: "/homologacao", label: "Homologação", icone: "✅", grupo: "Ajuda" },
 ];
 
-export const GRUPOS: ItemMenu["grupo"][] = ["Gestão", "Cadastros", "Inteligência", "Sistema", "Ajuda"];
+export const GRUPOS: ItemMenu["grupo"][] = ["Gestão", "Cadastros", "Inteligência", "Comunicar", "Sistema", "Ajuda"];
