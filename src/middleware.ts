@@ -17,6 +17,12 @@ export function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
+  // API routes com Bearer token passam direto (validação do segredo na própria rota)
+  const authHeader = req.headers.get('authorization') ?? ''
+  if (pathname.startsWith('/api/') && authHeader.startsWith('Bearer ')) {
+    return NextResponse.next()
+  }
+
   const token = req.cookies.get(COOKIE)?.value
 
   // Sem token → redireciona para login
