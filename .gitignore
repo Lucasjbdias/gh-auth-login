@@ -49,3 +49,6 @@ Dados-banco/
 /*.pdf
 /*.xlsx
 /*.XLS
+
+# Log de execucao da importacao: estado de execucao, nao fonte.
+importacao-log.txt
