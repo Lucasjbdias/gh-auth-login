@@ -130,13 +130,15 @@ export function Badge({
 export function Tabela({
   colunas,
   children,
+  id,
 }: {
   colunas: string[];
   children: ReactNode;
+  id?: string;
 }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+    <div className="overflow-x-auto" id={id}>
+      <table className="w-full text-sm" data-export-table>
         <thead>
           <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
             {colunas.map((c) => (
