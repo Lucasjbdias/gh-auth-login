@@ -9,6 +9,11 @@ import { balanceteSicomImporter } from "./balanceteSicom";
 import { amSicomImporter } from "./amSicom";
 import { remessaGenericaImporter } from "./remessaGenerica";
 import { csvGenericoImporter } from "./csvGenerico";
+import { lotacaoImporter } from "./lotacao";
+import { empenhosXlsImporter } from "./empenhosXls";
+import { empenhosPagosImporter } from "./empenhosPagos";
+import { manadImporter } from "./manad";
+import { tabelaRubricasImporter } from "./tabelaRubricas";
 
 // =====================================================================
 // REGISTRY de importadores.
@@ -25,6 +30,11 @@ export const IMPORTADORES: Importer[] = [
   demoDespesaImporter,
   balanceteSicomImporter,
   amSicomImporter, // remessa mensal AM: empenhos, receitas, liquidações, pagamentos
+  lotacaoImporter,        // BCM_QRP_Lotacao.txt → secretarias com nomes reais
+  empenhosXlsImporter,    // EMPENHOS.XLS → empenhos detalhados (fornecedor, classif., processo)
+  empenhosPagosImporter,  // EMPENHOS_PAGOS.XLS → atualiza datas de liquidação e pagamento
+  manadImporter,          // MANAD.TXT → FolhaPagamento agregada (LGPD: sem dados individuais)
+  tabelaRubricasImporter, // Tabela_Rubricas.xlsx → referência de verbas com flags tributárias
   // ↓ novos importadores especializados de remessa entram aqui (folha, obra…)
   remessaGenericaImporter, // ingestor genérico p/ qualquer outro módulo de remessa (.zip)
   csvGenericoImporter, // fallback genérico — manter por último
