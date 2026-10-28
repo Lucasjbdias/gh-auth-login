@@ -16,6 +16,8 @@ import {
   Badge,
 } from "@/components/ui";
 import { GraficoLinhaMensal, GraficoPizza } from "@/components/Charts";
+import { BotaoExportar } from "@/components/BotaoExportar";
+import { BotaoComunicar } from "@/components/BotaoComunicar";
 
 export const dynamic = "force-dynamic";
 
@@ -115,12 +117,16 @@ export default async function PaginaReceitas() {
       </div>
 
       <Card className="mt-6">
-        <CardTitulo>Receitas por origem</CardTitulo>
+        <div className="flex items-center justify-between">
+          <CardTitulo>Receitas por origem</CardTitulo>
+          <BotaoExportar idTabela="tabela-receitas" titulo="Receitas por Origem" />
+        </div>
         {linhasOrigem.length === 0 ? (
           <EmptyState mensagem="Nenhuma receita registrada neste exercício." />
         ) : (
           <Tabela
-            colunas={["Origem", "Previsto", "Arrecadado", "% Realização", ""]}
+            id="tabela-receitas"
+            colunas={["Origem", "Previsto", "Arrecadado", "% Realização", "", ""]}
           >
             {linhasOrigem.map((l) => {
               const abaixo = l.realizacao < 0.9;
@@ -140,6 +146,14 @@ export default async function PaginaReceitas() {
                   </td>
                   <td className="px-3 py-2">
                     {abaixo && <Badge cor="red">Abaixo do esperado</Badge>}
+                  </td>
+                  <td className="px-3 py-2">
+                    <BotaoComunicar
+                      origemTipo="RECEITA"
+                      titulo={`Receita — ${l.origem}`}
+                      descricao={`Origem: ${l.origem} | Previsto: ${moeda(l.previsto)} | Arrecadado: ${moeda(l.arrecadado)} | Realização: ${percentual(l.realizacao)}`}
+                      prioridade={abaixo ? "ALTA" : "NORMAL"}
+                    />
                   </td>
                 </tr>
               );

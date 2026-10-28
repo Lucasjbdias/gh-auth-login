@@ -19,6 +19,8 @@ import {
   Badge,
   BarraProporcao,
 } from "@/components/ui";
+import { BotaoExportar } from "@/components/BotaoExportar";
+import { BotaoComunicar } from "@/components/BotaoComunicar";
 import { GraficoBarraMensal, GraficoRanking } from "@/components/Charts";
 
 export const dynamic = "force-dynamic";
@@ -172,11 +174,15 @@ export default async function PaginaDespesas() {
       {/* Tabela: maiores empenhos */}
       <div className="mt-6">
         <Card>
-          <CardTitulo>Maiores empenhos</CardTitulo>
+          <div className="flex items-center justify-between">
+            <CardTitulo>Maiores empenhos</CardTitulo>
+            <BotaoExportar idTabela="tabela-empenhos" titulo="Maiores Empenhos" subtitulo={`${ex.orgao.nome} · Exercício ${ex.ano}`} />
+          </div>
           {maioresEmpenhos.length === 0 ? (
             <EmptyState mensagem="Sem empenhos registrados neste exercício." />
           ) : (
             <Tabela
+              id="tabela-empenhos"
               colunas={[
                 "Número",
                 "Data",
@@ -185,6 +191,7 @@ export default async function PaginaDespesas() {
                 "Elemento",
                 "Empenhado",
                 "Pago",
+                "",
               ]}
             >
               {maioresEmpenhos.map((e) => (
@@ -204,6 +211,14 @@ export default async function PaginaDespesas() {
                     {moeda(e.valorEmpenhado)}
                   </td>
                   <td className="px-3 py-2 text-slate-700">{moeda(e.valorPago)}</td>
+                  <td className="px-3 py-2">
+                    <BotaoComunicar
+                      origemTipo="EMPENHO"
+                      origemId={e.id}
+                      titulo={`Empenho ${e.numero} — ${e.fornecedor?.nome ?? "—"}`}
+                      descricao={`Empenho nº ${e.numero} | Data: ${data(e.data)} | Secretaria: ${e.secretaria?.nome ?? "—"} | Valor empenhado: ${moeda(e.valorEmpenhado)}`}
+                    />
+                  </td>
                 </tr>
               ))}
             </Tabela>

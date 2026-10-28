@@ -11,6 +11,8 @@ import {
   BarraProporcao,
 } from "@/components/ui";
 import { GraficoRanking } from "@/components/Charts";
+import { BotaoExportar } from "@/components/BotaoExportar";
+import { BotaoComunicar } from "@/components/BotaoComunicar";
 
 export const dynamic = "force-dynamic";
 
@@ -88,8 +90,11 @@ export default async function PaginaFornecedores() {
       )}
 
       <Card>
-        <CardTitulo>Fornecedores (por valor comprado)</CardTitulo>
-        <Tabela colunas={["Nome", "CNPJ/CPF", "Nº de itens", "Total comprado", "% do total"]}>
+        <div className="flex items-center justify-between">
+          <CardTitulo>Fornecedores (por valor comprado)</CardTitulo>
+          <BotaoExportar idTabela="tabela-fornecedores" titulo="Fornecedores" />
+        </div>
+        <Tabela id="tabela-fornecedores" colunas={["Nome", "CNPJ/CPF", "Nº de itens", "Total comprado", "% do total", ""]}>
           {linhas.map((l) => (
             <tr key={l.id} className="hover:bg-slate-50">
               <td className="px-3 py-2 font-medium text-slate-900">{l.nome}</td>
@@ -105,6 +110,14 @@ export default async function PaginaFornecedores() {
                     {percentual(totalComprado ? l.total / totalComprado : 0)}
                   </span>
                 </div>
+              </td>
+              <td className="px-3 py-2">
+                <BotaoComunicar
+                  origemTipo="FORNECEDOR"
+                  origemId={l.id}
+                  titulo={`Fornecedor ${l.nome}`}
+                  descricao={`Fornecedor: ${l.nome} | Documento: ${l.documento ?? "—"} | Total comprado: ${moeda(l.total)}`}
+                />
               </td>
             </tr>
           ))}

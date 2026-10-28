@@ -10,6 +10,8 @@ import {
   EmptyState,
   Badge,
 } from "@/components/ui";
+import { BotaoExportar } from "@/components/BotaoExportar";
+import { BotaoComunicar } from "@/components/BotaoComunicar";
 
 export const dynamic = "force-dynamic";
 
@@ -159,11 +161,15 @@ export default async function Pagina() {
       </Card>
 
       <Card>
-        <CardTitulo>Todos os contratos do exercício</CardTitulo>
+        <div className="flex items-center justify-between">
+          <CardTitulo>Todos os contratos do exercício</CardTitulo>
+          <BotaoExportar idTabela="tabela-contratos" titulo="Contratos" />
+        </div>
         {contratos.length === 0 ? (
           <EmptyState mensagem="Nenhum contrato cadastrado neste exercício." />
         ) : (
           <Tabela
+            id="tabela-contratos"
             colunas={[
               "Número",
               "Objeto",
@@ -174,6 +180,7 @@ export default async function Pagina() {
               "Fim",
               "Situação",
               "Nº aditivos",
+              "",
             ]}
           >
             {contratos.map((c) => {
@@ -208,6 +215,15 @@ export default async function Pagina() {
                   </td>
                   <td className="px-3 py-2">{badgeSituacao(c.situacao)}</td>
                   <td className="px-3 py-2 text-slate-700">{c.aditivos.length}</td>
+                  <td className="px-3 py-2">
+                    <BotaoComunicar
+                      origemTipo="CONTRATO"
+                      origemId={c.id}
+                      titulo={`Contrato ${c.numero} — ${c.fornecedor?.nome ?? "—"}`}
+                      descricao={`Contrato nº ${c.numero} | Objeto: ${c.objeto} | Fornecedor: ${c.fornecedor?.nome ?? "—"} | Valor: ${moeda(c.valorAtualizado)} | Situação: ${c.situacao}`}
+                      prioridade={d !== null && d < 0 ? "ALTA" : "NORMAL"}
+                    />
+                  </td>
                 </tr>
               );
             })}

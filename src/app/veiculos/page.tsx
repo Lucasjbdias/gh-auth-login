@@ -11,6 +11,8 @@ import {
   Badge,
 } from "@/components/ui";
 import { GraficoRanking } from "@/components/Charts";
+import { BotaoExportar } from "@/components/BotaoExportar";
+import { BotaoComunicar } from "@/components/BotaoComunicar";
 
 export const dynamic = "force-dynamic";
 
@@ -114,8 +116,12 @@ export default async function PaginaVeiculos() {
       </Card>
 
       <Card>
-        <CardTitulo>Detalhamento da frota</CardTitulo>
+        <div className="flex items-center justify-between">
+          <CardTitulo>Detalhamento da frota</CardTitulo>
+          <BotaoExportar idTabela="tabela-veiculos" titulo="Detalhamento da Frota" />
+        </div>
         <Tabela
+          id="tabela-veiculos"
           colunas={[
             "Placa",
             "Modelo",
@@ -126,6 +132,7 @@ export default async function PaginaVeiculos() {
             "Custo total",
             "Documentação",
             "Consumo (km/l)",
+            "",
           ]}
         >
           {veiculos.map((v) => {
@@ -162,6 +169,15 @@ export default async function PaginaVeiculos() {
                 </td>
                 <td className="px-3 py-2">
                   {kmL !== null ? `${numero(kmL, 1)} km/l` : "—"}
+                </td>
+                <td className="px-3 py-2">
+                  <BotaoComunicar
+                    origemTipo="VEICULO"
+                    origemId={v.id}
+                    titulo={`Veículo ${v.placa} — ${v.modelo}`}
+                    descricao={`Placa: ${v.placa} | Modelo: ${v.modelo} | Situação: ${v.situacao} | Documentação: ${v.documentacaoOk ? "Em dia" : "Pendente"} | Custo total: ${moeda(custoTotal)}`}
+                    prioridade={!v.documentacaoOk ? "ALTA" : "NORMAL"}
+                  />
                 </td>
               </tr>
             );

@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { moeda, moedaCompacta, numero, nomeMes } from "@/lib/format";
 import { classeContabil } from "@/lib/sicom";
 import { PageHeader, Card, CardTitulo, StatCard, Tabela, EmptyState, BarraProporcao } from "@/components/ui";
+import { BotaoExportar } from "@/components/BotaoExportar";
+import { BotaoComunicar } from "@/components/BotaoComunicar";
 
 export const dynamic = "force-dynamic";
 
@@ -77,8 +79,11 @@ export default async function ContabilPage() {
       </Card>
 
       <Card>
-        <CardTitulo>Maiores contas (por saldo atual)</CardTitulo>
-        <Tabela colunas={["Conta", "Descrição", "Classe", "Saldo atual", "Nat."]}>
+        <div className="flex items-center justify-between">
+          <CardTitulo>Maiores contas (por saldo atual)</CardTitulo>
+          <BotaoExportar idTabela="tabela-contabil" titulo="Contabilidade — Saldos" />
+        </div>
+        <Tabela id="tabela-contabil" colunas={["Conta", "Descrição", "Classe", "Saldo atual", "Nat.", ""]}>
           {topContas.map((r) => (
             <tr key={r.id} className="hover:bg-slate-50">
               <td className="px-3 py-2 font-mono text-xs text-slate-500">{r.conta}</td>
@@ -86,6 +91,14 @@ export default async function ContabilPage() {
               <td className="px-3 py-2 text-slate-600">{r.classe}</td>
               <td className="px-3 py-2 text-right font-medium">{moeda(r.saldoAtual)}</td>
               <td className="px-3 py-2 text-center text-slate-500">{r.naturezaAtual}</td>
+              <td className="px-3 py-2">
+                <BotaoComunicar
+                  origemTipo="CONTABIL"
+                  origemId={r.id}
+                  titulo={`Conta ${r.conta} — ${r.contaNome ?? "—"}`}
+                  descricao={`Conta PCASP ${r.conta} | Classe: ${r.classe} | Saldo atual: ${moeda(r.saldoAtual)} | Natureza: ${r.naturezaAtual ?? "—"}`}
+                />
+              </td>
             </tr>
           ))}
         </Tabela>

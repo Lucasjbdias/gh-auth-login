@@ -11,6 +11,8 @@ import {
   Badge,
   BarraProporcao,
 } from "@/components/ui";
+import { BotaoExportar } from "@/components/BotaoExportar";
+import { BotaoComunicar } from "@/components/BotaoComunicar";
 
 export const dynamic = "force-dynamic";
 
@@ -158,11 +160,15 @@ export default async function PaginaCompras() {
 
       {/* Licitações */}
       <Card className="mb-6">
-        <CardTitulo>Processos licitatórios</CardTitulo>
+        <div className="flex items-center justify-between">
+          <CardTitulo>Processos licitatórios</CardTitulo>
+          <BotaoExportar idTabela="tabela-licitacoes" titulo="Processos Licitatórios" />
+        </div>
         {licitacoes.length === 0 ? (
           <EmptyState mensagem="Nenhuma licitação registrada para este exercício." />
         ) : (
           <Tabela
+            id="tabela-licitacoes"
             colunas={[
               "Processo",
               "Modalidade",
@@ -172,6 +178,7 @@ export default async function PaginaCompras() {
               "Valor estimado",
               "Valor contratado",
               "Situação",
+              "",
             ]}
           >
             {licitacoes.map((l) => (
@@ -201,6 +208,14 @@ export default async function PaginaCompras() {
                     {rotuloSituacao(l.situacao)}
                   </Badge>
                 </td>
+                <td className="px-3 py-2">
+                  <BotaoComunicar
+                    origemTipo="LICITACAO"
+                    origemId={l.id}
+                    titulo={`Licitação ${l.numeroProcesso} — ${l.objeto?.slice(0, 60) ?? "—"}`}
+                    descricao={`Processo nº ${l.numeroProcesso} | Modalidade: ${l.modalidade ?? "—"} | Secretaria: ${l.secretaria?.nome ?? "—"} | Valor contratado: ${moeda(l.valorContratado)}`}
+                  />
+                </td>
               </tr>
             ))}
           </Tabela>
@@ -209,11 +224,15 @@ export default async function PaginaCompras() {
 
       {/* Atas de Registro de Preços */}
       <Card className="mb-6">
-        <CardTitulo>Atas de registro de preços</CardTitulo>
+        <div className="flex items-center justify-between">
+          <CardTitulo>Atas de registro de preços</CardTitulo>
+          <BotaoExportar idTabela="tabela-atas" titulo="Atas de Registro de Preços" />
+        </div>
         {atas.length === 0 ? (
           <EmptyState mensagem="Nenhuma ata de registro de preços cadastrada." />
         ) : (
           <Tabela
+            id="tabela-atas"
             colunas={[
               "Número",
               "Objeto",
@@ -222,6 +241,7 @@ export default async function PaginaCompras() {
               "Início",
               "Fim",
               "Situação",
+              "",
             ]}
           >
             {atas.map((a) => (
@@ -243,6 +263,14 @@ export default async function PaginaCompras() {
                     {rotuloSituacao(a.situacao)}
                   </Badge>
                 </td>
+                <td className="px-3 py-2">
+                  <BotaoComunicar
+                    origemTipo="LICITACAO"
+                    origemId={a.id}
+                    titulo={`Ata ${a.numero} — ${a.objeto?.slice(0, 60) ?? "—"}`}
+                    descricao={`Ata de Registro de Preços nº ${a.numero} | Fornecedor: ${a.fornecedor ?? "—"} | Valor total: ${moeda(a.valorTotal)}`}
+                  />
+                </td>
               </tr>
             ))}
           </Tabela>
@@ -251,7 +279,10 @@ export default async function PaginaCompras() {
 
       {/* Itens com maior variação de preço */}
       <Card>
-        <CardTitulo>Itens com maior variação de preço</CardTitulo>
+        <div className="flex items-center justify-between">
+          <CardTitulo>Itens com maior variação de preço</CardTitulo>
+          <BotaoExportar idTabela="tabela-variacoes" titulo="Variação de Preços" />
+        </div>
         <p className="mb-3 text-xs text-slate-400">
           Produtos com 2 ou mais compras registradas. A variação compara o maior
           preço unitário pago com a média histórica do item.
@@ -260,6 +291,7 @@ export default async function PaginaCompras() {
           <EmptyState mensagem="Não há produtos com histórico suficiente (mínimo de 2 compras) para análise de variação." />
         ) : (
           <Tabela
+            id="tabela-variacoes"
             colunas={[
               "Produto",
               "Categoria",
@@ -269,6 +301,7 @@ export default async function PaginaCompras() {
               "Menor",
               "Maior",
               "Variação",
+              "",
               "",
             ]}
           >
@@ -309,6 +342,15 @@ export default async function PaginaCompras() {
                         ? "bg-alerta-amarelo"
                         : "bg-alerta-verde"
                     }
+                  />
+                </td>
+                <td className="px-3 py-2">
+                  <BotaoComunicar
+                    origemTipo="PRODUTO"
+                    origemId={v.id}
+                    titulo={`Variação de preço — ${v.descricao}`}
+                    descricao={`Produto: ${v.descricao} | Categoria: ${v.categoria} | Variação: +${percentual(v.variacao)} acima da média | Menor: ${moeda(v.menor)} / Maior: ${moeda(v.maior)} / Média: ${moeda(v.media)}`}
+                    prioridade={v.variacao >= 0.5 ? "ALTA" : "NORMAL"}
                   />
                 </td>
               </tr>

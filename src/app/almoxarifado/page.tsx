@@ -11,6 +11,8 @@ import {
   Badge,
 } from "@/components/ui";
 import { GraficoRanking } from "@/components/Charts";
+import { BotaoExportar } from "@/components/BotaoExportar";
+import { BotaoComunicar } from "@/components/BotaoComunicar";
 
 export const dynamic = "force-dynamic";
 
@@ -111,11 +113,15 @@ export default async function PaginaAlmoxarifado() {
 
       <div className="mb-6">
         <Card>
-          <CardTitulo>Produtos críticos</CardTitulo>
+          <div className="flex items-center justify-between">
+            <CardTitulo>Produtos críticos</CardTitulo>
+            <BotaoExportar idTabela="tabela-criticos" titulo="Produtos Críticos" />
+          </div>
           {estoque.criticos.length === 0 ? (
             <EmptyState mensagem="Nenhum produto com estoque crítico." />
           ) : (
             <Tabela
+              id="tabela-criticos"
               colunas={[
                 "Código",
                 "Descrição",
@@ -123,6 +129,7 @@ export default async function PaginaAlmoxarifado() {
                 "Estoque atual",
                 "Estoque mínimo",
                 "Custo médio",
+                "",
               ]}
             >
               {estoque.criticos.map((p) => (
@@ -145,6 +152,15 @@ export default async function PaginaAlmoxarifado() {
                   <td className="px-3 py-2 text-slate-600">
                     {moeda(p.custoMedio)}
                   </td>
+                  <td className="px-3 py-2">
+                    <BotaoComunicar
+                      origemTipo="PRODUTO"
+                      origemId={p.id}
+                      titulo={`Estoque crítico — ${p.descricao}`}
+                      descricao={`Produto ${p.codigo} — ${p.descricao} com estoque crítico. Atual: ${numero(p.estoqueAtual, 0)} ${p.unidadeMedida} / Mínimo: ${numero(p.estoqueMinimo, 0)} ${p.unidadeMedida}`}
+                      prioridade="ALTA"
+                    />
+                  </td>
                 </tr>
               ))}
             </Tabela>
@@ -165,12 +181,16 @@ export default async function PaginaAlmoxarifado() {
 
       <div>
         <Card>
-          <CardTitulo>Últimas movimentações</CardTitulo>
+          <div className="flex items-center justify-between">
+            <CardTitulo>Últimas movimentações</CardTitulo>
+            <BotaoExportar idTabela="tabela-movimentacoes" titulo="Movimentações do Almoxarifado" />
+          </div>
           {ultimasMovimentacoes.length === 0 ? (
             <EmptyState mensagem="Nenhuma movimentação registrada." />
           ) : (
             <Tabela
-              colunas={["Data", "Produto", "Tipo", "Quantidade", "Secretaria"]}
+              id="tabela-movimentacoes"
+              colunas={["Data", "Produto", "Tipo", "Quantidade", "Secretaria", ""]}
             >
               {ultimasMovimentacoes.map((m) => (
                 <tr key={m.id}>
@@ -189,6 +209,14 @@ export default async function PaginaAlmoxarifado() {
                   </td>
                   <td className="px-3 py-2 text-slate-600">
                     {m.secretaria?.nome ?? "—"}
+                  </td>
+                  <td className="px-3 py-2">
+                    <BotaoComunicar
+                      origemTipo="PRODUTO"
+                      origemId={m.produtoId ?? m.id}
+                      titulo={`Movimentação — ${m.produto?.descricao ?? "Produto"}`}
+                      descricao={`${m.tipo === "ENTRADA" ? "Entrada" : "Saída"} de ${numero(m.quantidade, 0)} ${m.produto?.unidadeMedida ?? ""} | Secretaria: ${m.secretaria?.nome ?? "—"} | Data: ${data(m.data)}`}
+                    />
                   </td>
                 </tr>
               ))}

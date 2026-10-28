@@ -10,6 +10,8 @@ import {
   Badge,
 } from "@/components/ui";
 import { GraficoRanking } from "@/components/Charts";
+import { BotaoExportar } from "@/components/BotaoExportar";
+import { BotaoComunicar } from "@/components/BotaoComunicar";
 
 export const dynamic = "force-dynamic";
 
@@ -103,8 +105,12 @@ export default async function PatrimonioPagina() {
       </Card>
 
       <Card className="mb-6">
-        <CardTitulo>Bens patrimoniais</CardTitulo>
+        <div className="flex items-center justify-between">
+          <CardTitulo>Bens patrimoniais</CardTitulo>
+          <BotaoExportar idTabela="tabela-patrimonio" titulo="Bens Patrimoniais" />
+        </div>
         <Tabela
+          id="tabela-patrimonio"
           colunas={[
             "Nº",
             "Descrição",
@@ -115,6 +121,7 @@ export default async function PatrimonioPagina() {
             "Valor",
             "Secretaria",
             "Situação",
+            "",
           ]}
         >
           {bens.map((b) => (
@@ -146,17 +153,30 @@ export default async function PatrimonioPagina() {
                   {b.baixado ? "Baixado" : "Ativo"}
                 </Badge>
               </td>
+              <td className="px-3 py-2">
+                <BotaoComunicar
+                  origemTipo="PATRIMONIO"
+                  origemId={b.id}
+                  titulo={`Bem ${b.numero} — ${b.descricao}`}
+                  descricao={`Bem patrimonial nº ${b.numero} | Categoria: ${b.categoria ?? "—"} | Localização: ${b.localizacao ?? "Sem localização"} | Valor: ${moeda(b.valorAquisicao)}`}
+                  prioridade={!b.localizacao ? "ALTA" : "NORMAL"}
+                />
+              </td>
             </tr>
           ))}
         </Tabela>
       </Card>
 
       <Card>
-        <CardTitulo>Bens sem localização</CardTitulo>
+        <div className="flex items-center justify-between">
+          <CardTitulo>Bens sem localização</CardTitulo>
+          <BotaoExportar idTabela="tabela-sem-loc" titulo="Bens sem Localização" />
+        </div>
         {semLocalizacao.length === 0 ? (
           <EmptyState mensagem="Todos os bens possuem localização definida." />
         ) : (
           <Tabela
+            id="tabela-sem-loc"
             colunas={[
               "Nº",
               "Descrição",
@@ -165,6 +185,7 @@ export default async function PatrimonioPagina() {
               "Valor",
               "Secretaria",
               "Situação",
+              "",
             ]}
           >
             {semLocalizacao.map((b) => (
@@ -179,6 +200,15 @@ export default async function PatrimonioPagina() {
                 <td className="px-3 py-2">{b.secretaria?.nome ?? "—"}</td>
                 <td className="px-3 py-2">
                   <Badge cor="yellow">Sem localização</Badge>
+                </td>
+                <td className="px-3 py-2">
+                  <BotaoComunicar
+                    origemTipo="PATRIMONIO"
+                    origemId={b.id}
+                    titulo={`Bem sem localização — ${b.numero} — ${b.descricao}`}
+                    descricao={`Bem patrimonial nº ${b.numero} sem localização definida. Responsável: ${b.responsavel ?? "—"} | Secretaria: ${b.secretaria?.nome ?? "—"}`}
+                    prioridade="ALTA"
+                  />
                 </td>
               </tr>
             ))}

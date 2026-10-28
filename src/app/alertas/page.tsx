@@ -12,6 +12,8 @@ import {
   BadgeGravidade,
 } from "@/components/ui";
 import { AcoesAlerta } from "./AcoesAlerta";
+import { BotaoExportar } from "@/components/BotaoExportar";
+import { BotaoComunicar } from "@/components/BotaoComunicar";
 
 export const dynamic = "force-dynamic";
 
@@ -83,8 +85,12 @@ export default async function PaginaAlertas() {
           </div>
 
           <Card>
-            <CardTitulo>Alertas identificados</CardTitulo>
+            <div className="flex items-center justify-between">
+              <CardTitulo>Alertas identificados</CardTitulo>
+              <BotaoExportar idTabela="tabela-alertas" titulo="Alertas" />
+            </div>
             <Tabela
+              id="tabela-alertas"
               colunas={[
                 "Código",
                 "Tipo",
@@ -127,11 +133,20 @@ export default async function PaginaAlertas() {
                     {data(a.dataIdentificacao)}
                   </td>
                   <td className="px-3 py-2">
-                    <AcoesAlerta
-                      id={a.id}
-                      statusAtual={a.status}
-                      providenciaAtual={a.providencia ?? ""}
-                    />
+                    <div className="flex items-center gap-1.5">
+                      <AcoesAlerta
+                        id={a.id}
+                        statusAtual={a.status}
+                        providenciaAtual={a.providencia ?? ""}
+                      />
+                      <BotaoComunicar
+                        origemTipo="ALERTA"
+                        origemId={a.id}
+                        titulo={`Alerta ${a.codigo} — ${a.titulo}`}
+                        descricao={a.descricao ?? `Alerta ${a.tipo} identificado em ${a.secretaria?.nome ?? "—"}`}
+                        prioridade={a.gravidade === "VERMELHO" ? "URGENTE" : a.gravidade === "LARANJA" ? "ALTA" : "NORMAL"}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}
